@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ego2Ego: Generative Visual Perspective Taking Across Collaborators</title>
+<meta name="description" content="Ego2Ego generates the egocentric video that a collaborator sees from the ego person's video, a scene point cloud and the collaborator's camera trajectory.">
+<style>
+  :root { --blue:#004191; --blue-2:#657C9D; --blue-light:#C1CAD8; --soft:#F1F0EC; --text:#333; --ink:#505a60; --line:#e6e8ec;
+          --radius:12px; --shadow:0 1px 2px rgba(16,39,71,.06),0 1px 3px rgba(16,39,71,.05); --max:1170px; }
+  * { box-sizing:border-box; }
+  html { scroll-behavior:smooth; scroll-padding-top:52px; }
+  body { margin:0; background:var(--soft); color:var(--text); font-family:"Helvetica Neue",Helvetica,Arial,sans-serif; font-size:16px; line-height:1.6; }
+  a { color:var(--blue); }
+  header { background:var(--blue); color:#fff; padding:52px 20px 40px; text-align:center; }
+  header h1 { margin:0 auto; max-width:900px; font-size:38px; line-height:1.2; font-weight:700; }
+  header .authors { margin-top:22px; font-size:19px; }
+  header .au { display:inline-block; margin:0 12px; }
+  header .au a { color:#fff; text-decoration:none; border-bottom:1px solid rgba(255,255,255,.45); }
+  header .au a:hover { border-bottom-color:#fff; }
+  header .affil { margin-top:8px; color:var(--blue-light); font-size:15px; }
+  header .affil span { margin:0 10px; }
+  .btns { margin-top:24px; display:flex; flex-wrap:wrap; gap:12px; justify-content:center; }
+  .btn { display:inline-block; padding:8px 26px; border-radius:999px; background:#fff; color:var(--blue); font-weight:700; text-decoration:none; font-size:15px; border:2px solid #fff; }
+  .btn[aria-disabled="true"] { background:transparent; color:var(--blue-light); border-color:rgba(193,202,216,.55); cursor:not-allowed; position:relative; }
+  .btn[aria-disabled="true"]:hover::after, .btn[aria-disabled="true"]:focus::after { content:attr(data-tip); position:absolute; left:50%; top:calc(100% + 8px); transform:translateX(-50%);
+        background:#111; color:#fff; font-weight:400; font-size:12.5px; padding:3px 10px; border-radius:6px; white-space:nowrap; z-index:20; }
+  nav { position:sticky; top:0; z-index:10; background:#fff; border-bottom:1px solid var(--line); }
+  nav ul { list-style:none; margin:0 auto; padding:0 12px; max-width:var(--max); display:flex; flex-wrap:wrap; justify-content:center; }
+  nav a { display:block; padding:12px 12px; color:var(--ink); text-decoration:none; font-size:14px; font-weight:600; }
+  nav a:hover { color:var(--blue); }
+  main { max-width:var(--max); margin:0 auto; padding:28px 16px 40px; }
+  section { background:#fff; border-radius:var(--radius); box-shadow:var(--shadow); padding:28px 32px; margin-bottom:28px; }
+  h2 { margin:0 0 8px; color:var(--blue); font-size:26px; }
+  h3 { color:var(--blue); font-size:18px; margin:22px 0 6px; }
+  .lead { color:var(--ink); max-width:980px; }
+  .tldr { background:var(--soft); border-left:4px solid var(--blue); border-radius:0 var(--radius) var(--radius) 0; padding:14px 20px; font-size:18px; margin:0 0 20px; }
+  .tldr b { color:var(--blue); }
+  video, img.fig { display:block; width:100%; height:auto; border-radius:8px; background:#fff; }
+  .caption { color:var(--ink); font-size:14px; margin-top:10px; }
+  .contrib { margin:0; padding-left:22px; } .contrib li { margin:6px 0; }
+  .tabs { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0 14px; }
+  .tabs button { border:1px solid var(--blue-light); background:#fff; color:var(--blue-2); border-radius:999px; padding:6px 16px; font:inherit; font-size:14px; font-weight:600; cursor:pointer; }
+  .tabs button.active, .tabs button:hover { background:var(--blue); border-color:var(--blue); color:#fff; }
+  .tabs.sub { margin:4px 0 12px; } .tabs.sub button { padding:3px 12px; font-size:13px; }
+  .panel { display:none; } .panel.active { display:block; }
+  .speed { float:right; font-size:13px; color:var(--ink); margin:0; }
+  .speed button { border:1px solid var(--line); background:#fff; border-radius:6px; padding:2px 8px; cursor:pointer; font:inherit; font-size:13px; color:var(--ink); }
+  .speed button.active { border-color:var(--blue); color:var(--blue); font-weight:700; }
+  .modules { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:16px 0 4px; }
+  .mod { background:var(--soft); border-radius:10px; padding:14px 16px; font-size:15px; }
+  .mod b { color:var(--blue); display:block; margin-bottom:4px; }
+  .cards { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin:16px 0; }
+  .card { border:1px solid var(--line); border-top:3px solid var(--blue); border-radius:10px; padding:12px 16px; }
+  .card h4 { margin:0 0 6px; color:var(--blue); }
+  .kv { display:grid; grid-template-columns:90px auto 1fr; gap:8px; align-items:baseline; font-size:14.5px; padding:2px 0; }
+  .kv b { color:var(--blue); font-size:17px; } .kv i { color:var(--ink); font-size:12.5px; font-style:normal; }
+  .note { margin:6px 0 0; font-size:12.5px; color:var(--ink); }
+  .tablewrap { overflow-x:auto; margin-top:12px; }
+  table.quant { border-collapse:collapse; width:100%; font-size:13.5px; white-space:nowrap; }
+  table.quant th, table.quant td { padding:5px 7px; text-align:center; }
+  table.quant .l { text-align:left; }
+  table.quant th { color:var(--blue); border-bottom:1px solid var(--blue-light); }
+  table.quant thead { border-top:2px solid var(--blue); border-bottom:2px solid var(--blue); }
+  table.quant tbody { border-bottom:1px solid var(--line); }
+  table.quant tbody.ours { background:#eef2f8; border-bottom:2px solid var(--blue); }
+  table.quant td[rowspan] { vertical-align:middle; }
+  details { margin-top:14px; } summary { cursor:pointer; color:var(--blue); font-weight:700; font-size:18px; }
+  details > .lead { margin-top:10px; }
+  .chart { max-width:920px; margin:12px auto 0; } .chart svg { width:100%; height:auto; }
+  .bib { background:var(--soft); border-radius:10px; padding:14px 18px; font-family:ui-monospace,Menlo,Consolas,monospace; font-size:13px; white-space:pre-wrap; overflow-x:auto; }
+  footer { text-align:center; color:var(--ink); font-size:13px; padding:6px 16px 40px; }
+  @media (max-width:480px) { nav ul { flex-wrap:nowrap; overflow-x:auto; justify-content:flex-start; -webkit-overflow-scrolling:touch; } nav a { white-space:nowrap; padding:10px 10px; } }
+  @media (max-width:800px) { .modules,.cards { grid-template-columns:1fr; } header h1 { font-size:28px; } section { padding:20px 16px; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>Ego2Ego: Generative Visual Perspective Taking Across Collaborators</h1>
+  <div class="authors"><span class="au"><a href="https://chuhan-jiao.github.io/" target="_blank" rel="noopener">Chuhan Jiao</a><sup>1</sup></span><span class="au"><a href="http://www.johngideon.me/" target="_blank" rel="noopener">John Gideon</a><sup>2</sup></span><span class="au"><a href="https://anshul-gupta24.github.io/" target="_blank" rel="noopener">Anshul Gupta</a><sup>2</sup></span><span class="au"><a href="https://rosman9.github.io/" target="_blank" rel="noopener">Guy Rosman</a><sup>2</sup></span><span class="au"><a href="https://www.collaborative-ai.org/people/bulling/" target="_blank" rel="noopener">Andreas Bulling</a><sup>1</sup></span></div>
+  <div class="affil"><span><sup>1</sup>University of Stuttgart</span><span><sup>2</sup>Toyota Research Institute</span></div>
+  <div class="btns">
+    <a class="btn" href="#" aria-disabled="true" tabindex="0" role="link" data-tip="coming soon" title="coming soon">arXiv</a>
+    <a class="btn" href="#" aria-disabled="true" tabindex="0" role="link" data-tip="coming soon" title="coming soon">Code</a>
+  </div>
+</header>
+<nav><ul>
+  <li><a href="#overview">Overview</a></li>
+  <li><a href="#method">Method</a></li>
+  <li><a href="#results">Results</a></li>
+  <li><a href="#qualitative">Qualitative</a></li>
+  <li><a href="#counterfactual">Counterfactual</a></li>
+  <li><a href="#missing">Missing inputs</a></li>
+  <li><a href="#limitations">Limitations</a></li>
+  <li><a href="#citation">BibTeX</a></li>
+</ul></nav>
+
+<main>
+<section id="overview">
+  <div class="tldr"><b>TL;DR:</b> Given an ego person's egocentric video, a scene point cloud and a collaborator's camera trajectory,
+    <b>Ego2Ego</b> generates the continuous egocentric video that the collaborator sees, even when the collaborator never appears in the ego person's view.</div>
+  <p class="speed">Playback: <button data-rate="1" class="active">1&times;</button> <button data-rate="0.5">0.5&times;</button></p>
+  <video src="assets/videos/teaser.mp4" autoplay muted loop playsinline controls aria-label="Ego2Ego teaser video"></video>
+  <p class="caption">From left to right: the ego person's input video, the 3D scene point cloud with the ego person's camera, the collaborator's camera and the ego person's past views selected as visual memory,
+    followed by the collaborator's view generated by Ego2Ego alongside the ground truth. Ego2Ego generates the collaborator's view even when the collaborator is not visible to the ego person.</p>
+  <h3>Contributions</h3>
+  <ul class="contrib">
+    <li>We introduce the task of <i>generative visual perspective taking between collaborators</i>, and evaluate existing novel view synthesis, camera-controlled and exo-to-ego video generation methods on the CoMind dataset.</li>
+    <li>We propose Ego2Ego, a backbone-agnostic geometric method that combines shared 3D scene coordinates, relative ray-space attention and the ego person's visual memory.</li>
+    <li>Across three video diffusion backbones, Ego2Ego consistently outperforms the cross-view video generation baselines in visual quality, Level-2 scene layout and collaborator motion.</li>
+  </ul>
+  <details id="abstract">
+    <summary>Abstract</summary>
+    <p class="lead">Visual perspective taking, the ability to infer what another person sees from their position, is fundamental to human collaboration. However, prior works reduced perspective taking to state estimation, geometric reconstruction, or discrete question answering, whereas existing cross-view video generation methods either inferred the target view from the input video alone or required an external camera that observes the target person. We introduce generative visual perspective taking: Given an ego person's egocentric video, a scene point cloud, and a collaborator's camera trajectory, the task is to generate the continuous egocentric video from the collaborator's perspective. This task is challenging given extreme viewpoint shifts, dynamic occlusions, and sparse visual overlap. We address these challenges with Ego2Ego – a set of backbone-agnostic geometric modules that provide a pretrained video diffusion model with the 3D scene geometry shared by both interactants. Ego2Ego renders dense, temporally consistent scene coordinate maps into every view as a shared spatial reference, aligns cross-view tokens in 3D ray space through relative geometric attention, and recovers regions outside the ego person's current view from the ego person's visual memory. Experiments on the CoMind dataset across three video diffusion backbones show that Ego2Ego consistently improves visual quality, Level-2 scene layout accuracy, and collaborator motion, outperforming state-of-the-art cross-view video generation baselines on every backbone. As such, Ego2Ego is particularly promising for human-robot collaboration, both for inferring what a human collaborator sees and for turning single-person recordings into synchronised multi-perspective videos.</p>
+  </details>
+  <details id="why">
+    <summary>Why visual perspective taking matters</summary>
+    <p class="lead">Perspective taking is the ability to step outside one's own frame of reference and understand a situation from another person's point of view. Its visual form determines whether another person can see an object (Level&nbsp;1) or how the scene looks from their position (Level&nbsp;2).
+    Humans rely on it in human&ndash;human collaboration, for example when handing over an object, when referring to an object that only the collaborator can see, or when avoiding obstructing another person's view or motion. Robots that collaborate with humans are therefore argued to need similar abilities.
+    Prior work reduced visual perspective taking to estimating symbolic or geometric states, reconstructing the scene from another viewpoint or answering spatial questions. We study the more challenging task of visually synthesising what the collaborator actually sees.</p>
+  <p class="lead">This matters for human&ndash;robot collaboration in two complementary ways. When the ego person is a robot working with a human, generative perspective taking could let the robot infer what its human collaborator sees from their head trajectory, to plan complementary next actions and avoid redundant work.
+    Conversely, when training a robot policy to act as the collaborator, Ego2Ego can turn single-person recordings into synchronised multi-perspective videos. Such recordings of two people in the same workspace are costly to capture, yet valuable for visuomotor policy learning; Ego2Ego only requires a wearable camera, a one-time scene scan and a camera trajectory.</p>
+  </details>
+</section>
+
+<section id="method">
+  <h2>Method</h2>
+  <p class="lead">Ego2Ego equips a pretrained video diffusion transformer with three backbone-agnostic geometric modules that connect the two views through the 3D scene geometry shared by both individuals.</p>
+  <img class="fig" src="assets/img/method.png" alt="Overview of Ego2Ego">
+  <p class="caption"><b>Overview of Ego2Ego.</b> All conditions are encoded by the frozen VAE and form a single token sequence with the noisy collaborator latent.</p>
+  <div class="modules">
+    <div class="mod"><b>1. Dense geometric rendering</b>Rasterises the point cloud into every view and colours each pixel by its 3D coordinate in a shared frame, so that the same scene point carries the same colour across views, even under extreme viewpoint shifts and hand occlusions.</div>
+    <div class="mod"><b>2. Relative geometric attention</b>Aligns the geometric components of keys and values to each query token's ray-aligned frame, relating tokens across two independently moving cameras.</div>
+    <div class="mod"><b>3. The ego person's visual memory</b>Selects past ego-person frames that best cover the collaborator's view, recovering regions the ego person does not currently observe.</div>
+  </div>
+</section>
+
+<section id="results">
+  <h2>Results</h2>
+  <p class="lead">We compare Ego2Ego with cross-view video generation methods on the 1,020 test clips of CoMind. Ego2Ego achieves the best value on every metric. Even without cross-view pretraining, Ego2Ego on Wan2.2-5B and Wan2.1-14B surpasses the cross-view pretrained AnyView on most metrics, with higher PSNR (18.57 and 18.89 vs. 18.23&nbsp;dB), higher SSIM (0.538 and 0.551 vs. 0.513), lower LPIPS (0.356 and 0.343 vs. 0.400), lower FVD (181.2 and 164.7 vs. 228.0), lower translation error (0.32 and 0.28 vs. 0.43&nbsp;m) and higher Layout mIoU (20.7 and 26.1 vs. 15.9). Adding Ego2Ego to AnyView improves it further: PSNR by 1.34&nbsp;dB (to 19.57&nbsp;dB), LPIPS by 24% (to 0.306), Layout mIoU to 23.6 and Hand-mIoU to 30.9.</p>
+  <h3>Comparison to cross-view video generation methods on CoMind</h3>
+  <div class="tablewrap"><table class="quant">
+<thead>
+<tr><th class="l"><b>Method</b></th><th class="l"><b>Task</b></th><th class="l"><b>Backbone</b></th><th><b>CV</b></th><th><b>PSNR</b>&uarr;</th><th><b>SSIM</b>&uarr;</th><th><b>LPIPS</b>&darr;</th><th><b>CLIP-I</b>&uarr;</th><th><b>ViCLIP</b>&uarr;</th><th><b>FVD</b>&darr;</th><th><b>Transl</b>&darr;</th><th><b>Rot</b>&darr;</th><th><b>Layout</b>&uarr;</th><th><b>Hand</b>&uarr;</th></tr>
+</thead>
+<tbody>
+<tr><td class="l" rowspan="1">TrajectoryCrafter<sup>&dagger;</sup></td><td class="l" rowspan="1">NVS</td><td class="l" rowspan="1">CogVideoX-5B</td><td>&#10003;</td><td>13.13</td><td>0.312</td><td>0.642</td><td>0.72</td><td>0.50</td><td>915.1</td><td>0.48</td><td>23.5</td><td>2.1</td><td>17.6</td></tr>
+</tbody><tbody>
+<tr><td class="l" rowspan="2">ReCamMaster</td><td class="l" rowspan="2">Camera</td><td class="l" rowspan="2">Wan2.1-1.3B</td><td>&ndash;</td><td>15.64</td><td>0.435</td><td>0.512</td><td>0.82</td><td>0.84</td><td>347.8</td><td>0.40</td><td>16.2</td><td>8.2</td><td>14.6</td></tr>
+<tr><td>&#10003;</td><td>16.68</td><td>0.488</td><td>0.483</td><td>0.83</td><td>0.86</td><td>238.3</td><td>0.32</td><td>12.1</td><td>11.4</td><td>22.1</td></tr>
+</tbody><tbody>
+<tr><td class="l" rowspan="1">CameraAnything<sup>&Dagger;</sup></td><td class="l" rowspan="1">Camera</td><td class="l" rowspan="1">Wan2.1-14B</td><td>&ndash;</td><td>16.70</td><td>0.479</td><td>0.461</td><td>0.84</td><td>0.88</td><td>221.8</td><td><u>0.30</u></td><td>10.5</td><td>15.7</td><td>20.2</td></tr>
+</tbody><tbody>
+<tr><td class="l" rowspan="2">WorldWander</td><td class="l" rowspan="2">Exo-to-ego</td><td class="l" rowspan="2">Wan2.2-5B</td><td>&ndash;</td><td>15.94</td><td>0.449</td><td>0.516</td><td>0.81</td><td>0.82</td><td>288.7</td><td>0.48</td><td>25.0</td><td>6.1</td><td>17.5</td></tr>
+<tr><td>&#10003;</td><td>16.07</td><td>0.451</td><td>0.505</td><td>0.82</td><td>0.86</td><td>239.8</td><td>0.45</td><td>21.1</td><td>8.7</td><td>15.8</td></tr>
+</tbody><tbody>
+<tr><td class="l" rowspan="2">EgoX</td><td class="l" rowspan="2">Exo-to-ego</td><td class="l" rowspan="2">Wan2.1-14B</td><td>&ndash;</td><td>17.70</td><td>0.525</td><td>0.447</td><td>0.83</td><td>0.84</td><td>354.2</td><td>0.32</td><td>13.3</td><td>13.5</td><td>21.1</td></tr>
+<tr><td>&#10003;</td><td>17.56</td><td>0.514</td><td>0.456</td><td>0.83</td><td>0.87</td><td>281.6</td><td>0.33</td><td>12.1</td><td>14.7</td><td>21.2</td></tr>
+</tbody><tbody>
+<tr><td class="l" rowspan="2">AnyView</td><td class="l" rowspan="2">NVS</td><td class="l" rowspan="2">Cosmos-2B</td><td>&ndash;</td><td>16.32</td><td>0.465</td><td>0.561</td><td>0.79</td><td>0.67</td><td>1196.4</td><td>0.59</td><td>18.7</td><td>1.1</td><td>17.4</td></tr>
+<tr><td>&#10003;</td><td>18.23</td><td>0.513</td><td>0.400</td><td><u>0.87</u></td><td>0.89</td><td>228.0</td><td>0.43</td><td>9.3</td><td>15.9</td><td><u>27.1</u></td></tr>
+</tbody><tbody class="ours">
+<tr><td class="l" rowspan="3"><b>Ego2Ego (ours)</b></td><td class="l" rowspan="3">Ego-to-ego</td><td class="l">Wan2.2-5B</td><td>&ndash;</td><td>18.57</td><td>0.538</td><td>0.356</td><td>0.84</td><td>0.88</td><td>181.2</td><td>0.32</td><td><u>9.0</u></td><td>20.7</td><td>24.9</td></tr>
+<tr><td class="l">Wan2.1-14B</td><td>&ndash;</td><td><u>18.89</u></td><td><u>0.551</u></td><td><u>0.343</u></td><td>0.85</td><td><u>0.90</u></td><td><b>164.7</b></td><td><b>0.28</b></td><td>10.1</td><td><b>26.1</b></td><td>26.9</td></tr>
+<tr><td class="l">AnyView</td><td>&#10003;</td><td><b>19.57</b></td><td><b>0.556</b></td><td><b>0.306</b></td><td><b>0.89</b></td><td><b>0.92</b></td><td><u>177.1</u></td><td>0.41</td><td><b>8.8</b></td><td><u>23.6</u></td><td><b>30.9</b></td></tr>
+</tbody></table></div>
+  <p class="caption">CV: initialised from the cross-view pretraining released by the authors. Layout and Hand: Layout mIoU and Hand-mIoU, in percent. Bold: best; underlined: second best. <sup>&dagger;</sup>Released model, not fine-tuned. <sup>&Dagger;</sup>Trained only without cross-view pretraining.</p>
+</section>
+
+<section id="qualitative">
+  <h2>Qualitative results</h2>
+  <p class="lead">In each composite video, the top row shows the ego person's input video, the collaborator's ground-truth video and Ego2Ego built on Wan2.2-5B, Wan2.1-14B and AnyView; the bottom row shows six cross-view video generation baselines (for each baseline, the version with the higher PSNR in Table&nbsp;1).
+    Without a shared spatial reference and past ego-person frames, the baselines often copy content from the ego person's view or generate layouts that do not match the collaborator's viewpoint, whereas Ego2Ego places scene structures at the correct locations and generates the collaborator's hands across all three backbones.</p>
+  <div class="tabs" data-group="qual"><button class="active" data-target="q1">1</button><button data-target="q2">2</button><button data-target="q3">3</button><button data-target="q4">4</button><button data-target="q5">5</button><button data-target="q6">6</button><button data-target="q7">7</button><button data-target="q8">8</button><button data-target="q9">9</button><button data-target="q10">10</button></div><div class="panel active" id="q1"><video data-src="assets/videos/qual/01_9a667685_002621.mp4" muted loop playsinline controls preload="none" aria-label="Qualitative comparison 1"></video></div><div class="panel" id="q2"><video data-src="assets/videos/qual/02_11bd710a_002909.mp4" muted loop playsinline controls preload="none" aria-label="Qualitative comparison 2"></video></div><div class="panel" id="q3"><video data-src="assets/videos/qual/03_d8fcc3dd_003773.mp4" muted loop playsinline controls preload="none" aria-label="Qualitative comparison 3"></video></div><div class="panel" id="q4"><video data-src="assets/videos/qual/04_9a667685_003917.mp4" muted loop playsinline controls preload="none" aria-label="Qualitative comparison 4"></video></div><div class="panel" id="q5"><video data-src="assets/videos/qual/05_d1c6ae3a_002621.mp4" muted loop playsinline controls preload="none" aria-label="Qualitative comparison 5"></video></div><div class="panel" id="q6"><video data-src="assets/videos/qual/06_87f944b2_003341.mp4" muted loop playsinline controls preload="none" aria-label="Qualitative comparison 6"></video></div><div class="panel" id="q7"><video data-src="assets/videos/qual/07_58dd70af_004204.mp4" muted loop playsinline controls preload="none" aria-label="Qualitative comparison 7"></video></div><div class="panel" id="q8"><video data-src="assets/videos/qual/08_4fbe9724_000461.mp4" muted loop playsinline controls preload="none" aria-label="Qualitative comparison 8"></video></div><div class="panel" id="q9"><video data-src="assets/videos/qual/09_d8fcc3dd_003917.mp4" muted loop playsinline controls preload="none" aria-label="Qualitative comparison 9"></video></div><div class="panel" id="q10"><video data-src="assets/videos/qual/10_11bd710a_003341.mp4" muted loop playsinline controls preload="none" aria-label="Qualitative comparison 10"></video></div>
+</section>
+
+<section id="counterfactual">
+  <h2>Counterfactual trajectories</h2>
+  <p class="lead">Because Ego2Ego conditions on the shared 3D scene geometry and the collaborator's camera trajectory, it can also synthesise what a collaborator would see along trajectories that were not recorded at the same time as the ego person's video. We pair the ego person's video with a real collaborator trajectory from another moment of the same session,
+    in which the collaborator never appears in the ego person's view, and re-select the visual memory and re-render the scene coordinate maps. Each video shows the ego person's input, the 3D camera trajectories, the ground truth of the original trajectory (for reference only) and Ego2Ego's prediction along the counterfactual trajectory.
+    In Example&nbsp;1, the counterfactual trajectory stays by the refrigerator while the ego person works at the counter; all three backbones synthesise the opened refrigerator with hands reaching into it. This is promising for estimating what a collaborator would perceive from candidate positions in the workspace and for turning single-person recordings into diverse multi-perspective videos.</p>
+  <div class="tabs" data-group="cf"><button class="active" data-target="c1">Example 1</button><button data-target="c2">Example 2</button><button data-target="c3">Example 3</button></div><div class="panel active" id="c1"><div class="tabs sub" data-group="cf1"><button class="active" data-target="c1b1">Wan2.2-5B</button><button data-target="c1b2">Wan2.1-14B</button><button data-target="c1b3">AnyView</button></div><div class="panel active" id="c1b1"><video data-src="assets/videos/cf/58dd70af_001180__cf__000892_wan22_5b.mp4" muted loop playsinline controls preload="none"></video></div><div class="panel" id="c1b2"><video data-src="assets/videos/cf/58dd70af_001180__cf__000892_wan21_14b.mp4" muted loop playsinline controls preload="none"></video></div><div class="panel" id="c1b3"><video data-src="assets/videos/cf/58dd70af_001180__cf__000892_anyview.mp4" muted loop playsinline controls preload="none"></video></div></div><div class="panel" id="c2"><div class="tabs sub" data-group="cf2"><button class="active" data-target="c2b1">Wan2.2-5B</button><button data-target="c2b2">Wan2.1-14B</button><button data-target="c2b3">AnyView</button></div><div class="panel active" id="c2b1"><video data-src="assets/videos/cf/11bd710a_002765__cf__000749_wan22_5b.mp4" muted loop playsinline controls preload="none"></video></div><div class="panel" id="c2b2"><video data-src="assets/videos/cf/11bd710a_002765__cf__000749_wan21_14b.mp4" muted loop playsinline controls preload="none"></video></div><div class="panel" id="c2b3"><video data-src="assets/videos/cf/11bd710a_002765__cf__000749_anyview.mp4" muted loop playsinline controls preload="none"></video></div></div><div class="panel" id="c3"><div class="tabs sub" data-group="cf3"><button class="active" data-target="c3b1">Wan2.2-5B</button><button data-target="c3b2">Wan2.1-14B</button><button data-target="c3b3">AnyView</button></div><div class="panel active" id="c3b1"><video data-src="assets/videos/cf/63f25fa8_001469__cf__000893_wan22_5b.mp4" muted loop playsinline controls preload="none"></video></div><div class="panel" id="c3b2"><video data-src="assets/videos/cf/63f25fa8_001469__cf__000893_wan21_14b.mp4" muted loop playsinline controls preload="none"></video></div><div class="panel" id="c3b3"><video data-src="assets/videos/cf/63f25fa8_001469__cf__000893_anyview.mp4" muted loop playsinline controls preload="none"></video></div></div>
+</section>
+
+<section id="missing">
+  <h2>Without DGR and without visual memory</h2>
+  <p class="lead">Human&ndash;robot interaction recordings are hard to collect, so a method for synthesising collaborator views should keep working when an input is missing. Ego2Ego does: the same trained models run when no scene scan is available or when a recording has just started and the ego person has no earlier frames.</p>
+  <h3>Without dense geometric rendering (DGR)</h3>
+  <p class="lead">When the scene coordinate maps are not available at test time, we set them to zero for the ego person, the collaborator and the memory frames, and generate with a single forward pass. Ego2Ego still reconstructs the scene, such as the counter and the sink, and the collaborator's hands from the ego person's video, the visual memory and relative geometric attention. In Clip&nbsp;1 both participants work side by side at the counter; in Clip&nbsp;2 the ego person works at the cutting board while the collaborator washes at the sink, outside the ego person's current view.</p>
+  <div class="tabs" data-group="nodgr"><button class="active" data-target="d1">Clip 1</button><button data-target="d2">Clip 2</button></div>
+  <div class="panel active" id="d1"><video data-src="assets/videos/nodgr/01_313483e1_000317.mp4" muted loop playsinline controls preload="none" aria-label="Without DGR, clip 1"></video></div>
+  <div class="panel" id="d2"><video data-src="assets/videos/nodgr/02_4fbe9724_001325.mp4" muted loop playsinline controls preload="none" aria-label="Without DGR, clip 2"></video></div>
+  <h3>Without visual memory</h3>
+  <p class="lead">At the start of a recording session no earlier ego-person frames exist and the visual memory is empty (29 of the 1,020 test clips). Because whole-memory dropout is applied during training, the full models run directly on these clips and still reconstruct the visible scene layout from the collaborator's viewpoint.</p>
+  <div class="tabs" data-group="nomem"><button class="active" data-target="n1">Clip 1</button><button data-target="n2">Clip 2</button></div>
+  <div class="panel active" id="n1"><video data-src="assets/videos/nomem/313483e1_000029.mp4" muted loop playsinline controls preload="none"></video></div>
+  <div class="panel" id="n2"><video data-src="assets/videos/nomem/8f8b5bf7_000029.mp4" muted loop playsinline controls preload="none"></video></div>
+</section>
+
+<section id="limitations">
+  <h2>Limitations</h2>
+  <p class="lead"><b>Transparent surfaces.</b> When the collaborator faces a window overlooking a building outside, the window glass and outdoor scene are absent from the scene point cloud and appear as an empty region in the collaborator's scene coordinate map. Wan2.2-5B and Wan2.1-14B fill this region with a blind or a wall, while AnyView reconstructs the outdoor view only partially.</p>
+  <video data-src="assets/videos/fail/transparent.mp4" muted loop playsinline controls preload="none" aria-label="Failure example: transparent surfaces"></video>
+  <p class="lead"><b>Ego-person appearance.</b> Because the ego person's egocentric camera observes only the ego person's own hands and arms and the static point cloud does not include moving people, the inputs provide no visual reference for the ego person's head or torso; when the ego person enters the collaborator's view, the generated person can therefore differ from the ego person in hair and facial appearance.</p>
+  <video data-src="assets/videos/fail/appearance.mp4" muted loop playsinline controls preload="none" aria-label="Failure example: ego-person appearance"></video>
+</section>
+
+<section id="citation">
+  <h2>BibTeX</h2>
+  <div class="bib">@article{jiao2026ego2ego,
+  title   = {Ego2Ego: Generative Visual Perspective Taking Across Collaborators},
+  author  = {Jiao, Chuhan and Gideon, John and Gupta, Anshul and Rosman, Guy and Bulling, Andreas},
+  journal = {arXiv preprint},
+  year    = {2026}
+}</div>
+  <h2 style="margin-top:28px">Acknowledgements</h2>
+  <p class="lead">The authors gratefully acknowledge the scientific support and HPC resources provided by the Erlangen National High Performance Computing Center (NHR@FAU) of the Friedrich-Alexander-Universität Erlangen-Nürnberg (FAU) under the NHR project Project a113cb | JA-29757. NHR funding is provided by federal and Bavarian state authorities.</p>
+</section>
+</main>
+<footer>All videos are 49 frames at 10&nbsp;fps (4.8&nbsp;s) and loop. Fisheye frames are shown inside a circle.</footer>
+
+<script>
+(function () {
+  var rate = 1;
+  function load(v) { if (!v.getAttribute('src') && v.dataset.src) { v.setAttribute('src', v.dataset.src); } }
+  function play(v) { load(v); v.playbackRate = rate; var p = v.play(); if (p && p.catch) { p.catch(function () {}); } }
+  function visible(v) {
+    for (var p = v.closest('.panel'); p; p = p.parentElement ? p.parentElement.closest('.panel') : null) {
+      if (!p.classList.contains('active')) { return false; }
+    }
+    return true;
+  }
+  var io = new IntersectionObserver(function (es) {
+    es.forEach(function (e) { var v = e.target; if (e.isIntersecting && visible(v)) { play(v); } else { v.pause(); } });
+  }, { threshold: 0.15 });
+  document.querySelectorAll('video').forEach(function (v) { io.observe(v); });
+  document.querySelectorAll('.tabs').forEach(function (tabs) {
+    tabs.addEventListener('click', function (ev) {
+      var b = ev.target.closest('button'); if (!b) { return; }
+      tabs.querySelectorAll('button').forEach(function (x) {
+        x.classList.remove('active');
+        var p = document.getElementById(x.dataset.target);
+        p.classList.remove('active'); p.querySelectorAll('video').forEach(function (v) { v.pause(); });
+      });
+      b.classList.add('active');
+      var p = document.getElementById(b.dataset.target);
+      p.classList.add('active'); p.querySelectorAll('video').forEach(function (v) { if (visible(v)) { v.currentTime = 0; play(v); } });
+    });
+  });
+  document.querySelectorAll('.btn[aria-disabled="true"]').forEach(function (a) {
+    a.addEventListener('click', function (e) { e.preventDefault(); });
+  });
+  document.querySelectorAll('.speed button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      rate = parseFloat(b.dataset.rate);
+      document.querySelectorAll('.speed button').forEach(function (x) { x.classList.toggle('active', x === b); });
+      document.querySelectorAll('video').forEach(function (v) { v.playbackRate = rate; });
+    });
+  });
+})();
+</script>
+</body>
+</html>
